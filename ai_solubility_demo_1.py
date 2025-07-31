@@ -37,7 +37,8 @@ def search_best_match(df, smiles, solvent=None, temperature_k=None):
     return filtered.sort_values(by="LogS(mol/L)", ascending=False)
 
 st.title("Solubility Prediction System")
-st.write("This application allows you to search for solubility data based on SMILES, solvent, and temperature.")
+st.write("This application retrieves solubility data (LogS) based on the input SMILES, solvent, and temperature. If data is available in the database, it will display the results; otherwise, it will predict the solubility using Sekuen's machine learning model.")
+
 smiles_input = st.text_input("Enter SMILES:")
 solvent_input = st.selectbox("Select Solvent:", solvents_list)
 temp_str = st.text_input("Enter Temperature (K) or leave blank:", "")
@@ -65,7 +66,8 @@ if st.button("Search"):
                 "SMILES": smiles_input,
                 "Solvent": solvent_input,
                 "Temperature_K": temperature_input or 298.15,
-                "Predicted LogS": predicted_logS
+                "Predicted LogS": predicted_logS,
+                "Source": "Sekuen Random Forest Model v1"
             }])
 
             st.success("Prediction successful.")
