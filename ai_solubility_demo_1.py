@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st 
 
 # df = pd.read_csv('Final_Merged_Aqsoldbc_Bigsolv2.csv')
-df = pd.read_csv(r'Final_Merged_Aqsoldbc_Bigsolv2.csv')
+df = pd.read_csv(r'C:\Users\LENOVO\Desktop\Sekuen\Sekuen1\AISolubility\DataSets\Final_Merged_Aqsoldbc_Bigsolv2.csv')
 df = df.convert_dtypes()
 solvents_list = [None]+df.Solvent.unique().tolist()
 
@@ -37,42 +37,44 @@ def search_best_match(df, smiles, solvent=None, temperature_k=None):
     return filtered.sort_values(by="LogS(mol/L)", ascending=False)
 
 st.title("Solubility Prediction System")
-st.write("This application retrieves solubility data (LogS) based on the input SMILES, solvent, and temperature. If data is available in the database, it will display the results; otherwise, it will predict the solubility using Sekuen's machine learning model.")
+st.write("This application allows you to search for solubility data based on SMILES, solvent, and temperature.")
+smiles_input = st.text_input("Enter SMILES:").replace(" ","")
 
-smiles_input = st.text_input("Enter SMILES:")
+
 solvent_input = st.selectbox("Select Solvent:", solvents_list)
 temp_str = st.text_input("Enter Temperature (K) or leave blank:", "")
 temperature_input = float(temp_str) if temp_str.strip() else None
 
 if st.button("Search"):
     result = search_best_match(df, smiles_input, solvent_input, temperature_input)
-    if result is not None:
-        st.write("Search Result:")
-        st.dataframe(result)
-    # else:
-    #     st.write("No matching data found for the given inputs.")
-    #     st.write("Attempting to Predict solubility...")
-        # Call function and st.write
-    else:
-        st.write("No matching data found for the given inputs.")
-        st.write("Attempting to Predict solubility...")
 
-        try:
-            from functions import predict_solubility  # our pipeline function
+    try:
+        from functions import predict_solubility  # prediction logic
 
-            predicted_logS = predict_solubility(smiles_input, solvent_input, temperature_input or 298.15)
+        # default values for solvent and temperature added, so both experimental data and predicted solubility are shown — even if the user only enters SMILES:
+        solvent_for_prediction = solvent_input if solvent_input else "water"
+        temperature_for_prediction = temperature_input if temperature_input is not None else 298.15
+        predicted_logS = predict_solubility(smiles_input, solvent_for_prediction, temperature_for_prediction)
 
-            result_df = pd.DataFrame([{
-                "SMILES": smiles_input,
-                "Solvent": solvent_input,
-                "Temperature_K": temperature_input or 298.15,
-                "Predicted LogS": predicted_logS,
-                "Source": "Sekuen Random Forest Model v1"
-            }])
+        # Format both results in one combined display
+        output_dict = {
+            "SMILES": smiles_input,
+            "Solvent": solvent_for_prediction,
+            "Temperature_K": temperature_for_prediction,
+            "Predicted LogS": predicted_logS
+        }
 
-            st.success("Prediction successful.")
-            st.dataframe(result_df.convert_dtypes())
+        if result is not None:
+            st.success("✅ Experimental data found.")
+            st.dataframe(result)
+            output_dict["Experimental LogS"] = result["LogS(mol/L)"].values[0] if "LogS(mol/L)" in result else "Not Found"
 
+        else:
+            st.warning("⚠️ No experimental data found.")
 
-        except Exception as e:
-            st.error(f"Prediction failed: {e}")
+        # Show combined summary
+        st.write("📊 Prediction:")
+        st.dataframe(pd.DataFrame([output_dict]))
+
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
